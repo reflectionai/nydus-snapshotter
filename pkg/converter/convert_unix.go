@@ -30,7 +30,6 @@ import (
 	"github.com/containerd/containerd/v2/pkg/labels"
 	"github.com/containerd/containerd/v2/plugins/content/local"
 	"github.com/containerd/errdefs"
-	"github.com/containerd/fifo"
 	"github.com/klauspost/compress/zstd"
 	"github.com/opencontainers/go-digest"
 	"github.com/opencontainers/image-spec/identity"
@@ -399,7 +398,7 @@ func packFromDirectory(ctx context.Context, dest io.Writer, opt PackOption, buil
 		<-unpackDone
 
 		blobPath := filepath.Join(workDir, "blob")
-		blobFifo, err := fifo.OpenFifo(ctx, blobPath, syscall.O_CREAT|syscall.O_RDONLY|syscall.O_NONBLOCK, 0640)
+		blobFifo, err := openFifo(ctx, blobPath, syscall.O_RDONLY, 0640)
 		if err != nil {
 			return errors.Wrapf(err, "create fifo file")
 		}
@@ -453,13 +452,13 @@ func packFromTar(ctx context.Context, dest io.Writer, opt PackOption) (io.WriteC
 	}()
 
 	rafsBlobPath := filepath.Join(workDir, "blob.rafs")
-	rafsBlobFifo, err := fifo.OpenFifo(ctx, rafsBlobPath, syscall.O_CREAT|syscall.O_RDONLY|syscall.O_NONBLOCK, 0640)
+	rafsBlobFifo, err := openFifo(ctx, rafsBlobPath, syscall.O_RDONLY, 0640)
 	if err != nil {
 		return nil, errors.Wrapf(err, "create fifo file")
 	}
 
 	tarBlobPath := filepath.Join(workDir, "blob.targz")
-	tarBlobFifo, err := fifo.OpenFifo(ctx, tarBlobPath, syscall.O_CREAT|syscall.O_WRONLY|syscall.O_NONBLOCK, 0640)
+	tarBlobFifo, err := openFifo(ctx, tarBlobPath, syscall.O_WRONLY, 0640)
 	if err != nil {
 		defer rafsBlobFifo.Close()
 		return nil, errors.Wrapf(err, "create fifo file")
@@ -795,7 +794,7 @@ func Unpack(ctx context.Context, ra content.ReaderAt, dest io.Writer, opt Unpack
 	}
 
 	tarPath := filepath.Join(workDir, "oci.tar")
-	blobFifo, err := fifo.OpenFifo(ctx, tarPath, syscall.O_CREAT|syscall.O_RDONLY|syscall.O_NONBLOCK, 0640)
+	blobFifo, err := openFifo(ctx, tarPath, syscall.O_RDONLY, 0640)
 	if err != nil {
 		return errors.Wrapf(err, "create fifo file")
 	}
